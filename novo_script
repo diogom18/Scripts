@@ -1,4 +1,81 @@
 #!/bin/bash
+
+
+# Desabilitar programa de busca de impressoras
+sudo systemctl disable avahi-daemon cups-browsed && sudo systemctl stop cups-browsed avahi-daemon
+
+
+# Alterar idioma do libreoffice e deinir como padrão. E o atril(pdf):
+# Definir programa padrões: - pesquisa no menu aplicativos -> associação de arquivos -> pesquisar por pdf -> mover para cima atril
+
+sudo apt-get install libreoffice-l10n-pt-br atril
+        
+
+## Definir nome do host
+echo " Digitar nome do computador:"
+read nome_pc
+sudo bash -c 'echo "$nome_pc" > /etc/hostname' # alterar o nome do computador
+        
+
+
+## Baixa o instalador do glpi 
+
+
+sudo wget https://github.com/glpi-project/glpi-agent/releases/download/1.4/glpi-agent-1.4-x86_64.AppImage && sudo chmod 777 glpi-agent-1.4-x86_64.AppImage && sudo ./glpi-agent-1.4-x86_64.AppImage --install --server http://glpi.lan.ifto.edu.br:8087/front/inventory.php && sudo systemctl enable glpi-agent.service && sudo glpi-agent
+
+
+
+
+
+#########################################
+        INSERINDO NO DOMÍNIO
+#########################################
+
+### DADOS do AD
+#Server : Windows Server 2012 RC
+#NetBIOS Name : IFTO
+#Domain Name : IFTO.LOCAL
+#Realm : IFTO.LOCAL
+#Hostname : araguaina03.ifto.local  araguaina03 
+#IP: 10.13.0.10
+
+#########################################
+
+# Adicionar no final do arquivo /etc/hosts:
+
+sudo bash -c 'echo "10.13.0.10  araguaina03.ifto.local araguaina03" >> /etc/hosts'
+
+
+
+## Instalar os pacotes:
+
+sudo apt-get install realmd libnss-sss libpam-sss sssd sssd-tools adcli samba-common-bin oddjob oddjob-mkhomedir packagekit
+
+
+
+## Descoberta do servidor AD:
+
+sudo realm discover ifto.local &> /dev/null
+
+clear
+echo "Digitar matrícula de usuário para inserir pc no domínio"
+read matricula
+
+# Inserir no Domínio
+
+sudo realm join -U $(echo $matricula) ifto.local &> /dev/null 
+[$? -eq 0] && echo "computador $nome_pc inserido no domínio" || clear; echo "ERRO, pc nao foi inserido no dominio"; sleep 3
+
+
+        
+        
+
+## Verificar dados do domínio
+
+sudo realm list &> /dev/null
+
+
+
 #6) No ubuntu precisar habilitar a criação do diretório home ao logar:
 
 
@@ -9,24 +86,21 @@ sudo bash -c 'echo "Session-Type: Additional"  >> /usr/share/pam-configs/mkhomed
 sudo bash -c 'echo "Session:" >> /usr/share/pam-configs/mkhomedir'
 sudo bash -c  'echo "      required                       pam_mkhomedir.so umask=0022 skel=/etc/skel" >> /usr/share/pam-configs/mkhomedir'
 
-        
-
-
-echo 'executar o comando abaixo e marcar a opção activate mkhomedir' && sleep 5
 sudo pam-auth-update
-
 sleep 2
+
 # Reiniciar o serviço sssd.service e verificar o status:
 sudo systemctl restart sssd 
-
-
 
 # Testando a integração, obtendo dados de usuários do AD:
 sudo id $(echo $matricula)@ifto.local
 
 ## Dando permissão de sudo para grupos do AD:
 ## Editar o arquivo sudoers, para isto basta executar o comando:
-echo ' Adicionando permissão g_arn_suporte e sti para sudo'
+
+clear
+echo " Adicionando permissão g_arn_suporte e sti para sudo"
+sleep 3
 
 sudo bash -c 'echo "%g_arn_suporte@IFTO.LOCAL ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers'
 sudo bash -c 'echo "sti ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers'
