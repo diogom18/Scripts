@@ -1,0 +1,54 @@
+#!/bin/bash
+#6) No ubuntu precisar habilitar a criação do diretório home ao logar:
+
+
+sudo bash -c 'echo "Name: activate mkhomedir" > /usr/share/pam-configs/mkhomedir'
+sudo bash -c 'echo "Default: yes"  >> /usr/share/pam-configs/mkhomedir'
+sudo bash -c 'echo "Priority: 900"  >> /usr/share/pam-configs/mkhomedir'
+sudo bash -c 'echo "Session-Type: Additional"  >> /usr/share/pam-configs/mkhomedir'
+sudo bash -c 'echo "Session:" >> /usr/share/pam-configs/mkhomedir'
+sudo bash -c  'echo "      required                       pam_mkhomedir.so umask=0022 skel=/etc/skel" >> /usr/share/pam-configs/mkhomedir'
+
+        
+
+
+echo 'executar o comando abaixo e marcar a opção activate mkhomedir' && sleep 5
+sudo pam-auth-update
+
+sleep 2
+# Reiniciar o serviço sssd.service e verificar o status:
+sudo systemctl restart sssd 
+
+
+
+# Testando a integração, obtendo dados de usuários do AD:
+sudo id $(echo $matricula)@ifto.local
+
+## Dando permissão de sudo para grupos do AD:
+## Editar o arquivo sudoers, para isto basta executar o comando:
+echo ' Adicionando permissão g_arn_suporte e sti para sudo'
+
+sudo bash -c 'echo "%g_arn_suporte@IFTO.LOCAL ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers'
+sudo bash -c 'echo "sti ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers'
+sleep 10
+
+
+## Adicionar o seguinte conteúdo no final do arquivo:
+#%g_arn_suporte@IFTO.LOCAL ALL=(ALL:ALL) NOPASSWD:ALL
+#sti ALL=(ALL:ALL) NOPASSWD:ALL
+#%g_servidores@IFTO.LOCAL ALL=(ALL:ALL) NOPASSWD:ALL
+
+###########################################################
+
+# Dando acesso aos grupos do domínio para logar no computador:
+
+sudo realm permit -g g_servidores@ifto.local
+
+
+#Caso precise,negar acesso a determinados grupos:
+# realm permit — withdraw ldapusers@example.com
+
+
+# Configurar hora para desligar computador 23:35
+
+sudo bash -c 'echo "30 23 * * * /usr/sbin/shutdown -h now" >> /etc/crontab'
